@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEO-аудит</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=JetBrains+Mono:wght@400;500&family=Golos+Text:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-dark: #0A0E27;
+            --bg-card: #151935;
+            --gold-start: #FFD700;
+            --gold-end: #FFA500;
+            --text-light: #E2E8F0;
+            --text-muted: #94A3B8;
+            --border-color: #1E293B;
+        }
+
+        body {
+            font-family: 'Golos Text', -apple-system, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-light);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .grain-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        header {
+            padding: 2rem 3rem;
+            border-bottom: 1px solid var(--border-color);
+            background: linear-gradient(135deg, rgba(252, 63, 29, 0.05) 0%, rgba(66, 133, 244, 0.05) 100%);
+            backdrop-filter: blur(10px);
+            position: relative;
+        }
+
+        h1 {
+            font-family: 'Unbounded', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--gold-start), var(--gold-end));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            letter-spacing: 0.05em;
+        }
+
+        .tabs-container {
+            margin: 2rem 3rem 0;
+            display: flex;
+            gap: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .tab-button {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 1rem 2rem;
+            font-family: 'Unbounded', sans-serif;
+            font-size: 1rem;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+            position: relative;
+            top: 1px;
+        }
+
+        .tab-button:hover {
+            color: var(--text-light);
+        }
+
+        .tab-button.active {
+            color: var(--text-light);
+            border-bottom-color: var(--gold-start);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .sub-tabs-container {
+            margin: 1.5rem 3rem 0;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .sub-tab-button {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 0.6rem 1.2rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .sub-tab-button:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: var(--gold-start);
+            color: var(--text-light);
+        }
+
+        .sub-tab-button.active {
+            background: linear-gradient(135deg, var(--gold-start), var(--gold-end));
+            color: var(--bg-dark);
+            border-color: transparent;
+            font-weight: 600;
+        }
+
+        .audit-layout {
+            margin: 2rem 3rem 3rem;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+
+        .audit-layout.with-toc {
+            grid-template-columns: 220px 1fr;
+        }
+
+        @media (max-width: 900px) {
+            .audit-layout.with-toc {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .toc-nav {
+            position: sticky;
+            top: 2rem;
+            height: fit-content;
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .toc-nav.hidden {
+            display: none;
+        }
+
+        .toc-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .toc-list {
+            list-style: none;
+        }
+
+        .toc-list a {
+            display: block;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+            padding: 0.4rem 0;
+            transition: color 0.2s;
+        }
+
+        .toc-list a:hover {
+            color: var(--gold-start);
+        }
+
+        .toc-list .toc-h3 {
+            padding-left: 1rem;
+            font-size: 0.85rem;
+        }
+
+        .audit-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 2rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .doc-content {
+            display: none;
+        }
+
+        .doc-content.active {
+            display: block;
+        }
+
+        /* Markdown-style content */
+        .audit-card h2 {
+            font-family: 'Unbounded', sans-serif;
+            font-size: 1.5rem;
+            margin: 2rem 0 1rem;
+            color: var(--text-light);
+            scroll-margin-top: 2rem;
+        }
+
+        .audit-card h2:first-child {
+            margin-top: 0;
+        }
+
+        .audit-card h3 {
+            font-family: 'Unbounded', sans-serif;
+            font-size: 1.2rem;
+            margin: 1.5rem 0 0.75rem;
+            color: var(--text-light);
+            scroll-margin-top: 2rem;
+        }
+
+        .audit-card p {
+            margin: 0.75rem 0;
+            line-height: 1.6;
+            color: var(--text-light);
+        }
+
+        .audit-card ul, .audit-card ol {
+            margin: 0.75rem 0;
+            padding-left: 1.5rem;
+            line-height: 1.7;
+        }
+
+        .audit-card li {
+            margin: 0.4rem 0;
+        }
+
+        .audit-card strong {
+            color: var(--gold-start);
+            font-weight: 600;
+        }
+
+        .audit-card hr {
+            border: none;
+            height: 1px;
+            background: var(--border-color);
+            margin: 2rem 0;
+        }
+
+        .audit-card blockquote {
+            border-left: 4px solid var(--gold-start);
+            padding-left: 1.5rem;
+            margin: 1.5rem 0;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .content-block {
+            margin: 1.5rem 0;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .audit-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+
+        .audit-table th,
+        .audit-table td {
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border-color);
+            text-align: left;
+            vertical-align: top;
+        }
+
+        .audit-table th {
+            background: rgba(255, 255, 255, 0.05);
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .audit-table tr:nth-child(even) td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .audit-table td strong {
+            color: var(--gold-start);
+        }
+
+        .audit-table.seo-profit th {
+            background: rgba(255, 215, 0, 0.1);
+            color: var(--gold-start);
+        }
+
+        .audit-table.filters-new th {
+            background: rgba(66, 133, 244, 0.15);
+            color: #5a9ff8;
+        }
+
+        .audit-note {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-style: italic;
+            margin: 1rem 0;
+        }
+
+        .audit-note .doc-link {
+            color: var(--gold-start);
+            text-decoration: none;
+            border-bottom: 1px dashed var(--gold-start);
+        }
+
+        .audit-note .doc-link:hover {
+            border-bottom-style: solid;
+        }
+
+        .product-card {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 2.5rem;
+            align-items: start;
+        }
+
+        @media (max-width: 800px) {
+            .product-card {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .product-card-gallery {
+            position: sticky;
+            top: 2rem;
+        }
+
+        .product-card-image {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: contain;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            padding: 1rem;
+        }
+
+        .product-card-main h1 {
+            font-family: 'Unbounded', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 600;
+            background: none;
+            -webkit-text-fill-color: var(--text-light);
+            margin-bottom: 0.75rem;
+        }
+
+        .product-card-lead {
+            font-size: 1rem;
+            line-height: 1.6;
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+        }
+
+        .product-card-specs {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 2rem;
+        }
+
+        .product-card-spec {
+            display: flex;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .product-card-spec strong {
+            flex-shrink: 0;
+            min-width: 140px;
+            font-size: 0.85rem;
+        }
+
+        .product-card-section {
+            margin-top: 2rem;
+        }
+
+        .product-card-section h2 {
+            margin-top: 0;
+        }
+
+        .product-card-main h4 {
+            font-family: 'Unbounded', sans-serif;
+            font-size: 1rem;
+            margin: 1.5rem 0 0.5rem;
+            color: var(--text-light);
+            scroll-margin-top: 2rem;
+        }
+
+        .product-specs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 0.5rem 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .product-spec-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+        }
+
+        .product-spec-item .spec-name {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .product-spec-item .spec-value {
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .product-desc-block {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .product-desc-block h2 {
+            font-size: 1.1rem;
+            margin: 0 0 0.75rem 0;
+        }
+
+        .product-desc-block p {
+            margin: 0 0 0.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        .product-desc-block p:last-child {
+            margin-bottom: 0;
+        }
+
+        .product-desc-block ul {
+            margin: 0.5rem 0;
+            padding-left: 1.25rem;
+        }
+
+        .product-desc-block li {
+            margin: 0.25rem 0;
+        }
+
+        .product-specs-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.88rem;
+        }
+
+        .product-specs-table th,
+        .product-specs-table td {
+            padding: 0.5rem 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+            text-align: left;
+            vertical-align: top;
+        }
+
+        .product-specs-table th {
+            width: 40%;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        .product-specs-table td strong {
+            color: var(--gold-start);
+        }
+
+        .product-section-title {
+            font-family: 'Unbounded', sans-serif;
+            font-size: 1.1rem;
+            margin: 2rem 0 1rem;
+            color: var(--text-light);
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .product-section-title:first-of-type {
+            margin-top: 0;
+        }
+
+        .seo-profit-block {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .seo-profit-block h3 {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+    </style>
+</head>
+<body>
+    <div class="grain-overlay"></div>
+
+    <header>
+        <h1>SEO-аудит OALT.RU 19/02/2026</h1>
+        <p class="subtitle">/ карточка товара · фильтры категории</p>
+    </header>
+
+    <div class="tabs-container">
+        <button class="tab-button active" data-tab="product">Карточка товара</button>
+        <button class="tab-button" data-tab="filters">Фильтры категории</button>
+    </div>
+
+    <!-- Product Tab -->
+    <div class="tab-content active" id="productTab">
+        <div class="sub-tabs-container" data-parent="product">
+            <button class="sub-tab-button active" data-doc="product-audit">Аудит карточки</button>
+            <button class="sub-tab-button" data-doc="product-card">Готовая карточка</button>
+        </div>
+        <div class="audit-layout" id="productLayout">
+            <nav class="toc-nav" id="productToc">
+                <div class="toc-title">Содержание</div>
+                <ul class="toc-list" id="productTocList"></ul>
+            </nav>
+            <div class="audit-card">
+                <div class="doc-content active" id="doc-product-audit">
+                    <h2 id="sostoyanie">Состояние</h2>
+                    <ol>
+                        <li>Отсутствие проработанных характеристик</li>
+                        <li>Отсутствие описания</li>
+                        <li>Нет блока внутренней перелинковки → страница не получает внутренний ссылочный вес от карточек расходников/аксессуаров/сопутствующих товаров</li>
+                    </ol>
+                    <p class="audit-note">/// Пример полной карточки предоставлен во вкладке <a href="#" class="doc-link" data-doc="product-card">Готовая карточка</a> ///</p>
+
+                    <h2 id="primery-uluchsheniya">Пример улучшения</h2>
+                    <ol>
+                        <li><strong>Шаблоны мета-тегов + уникализация</strong><br>
+                        Внедрить динамический, но контролируемый шаблон: Купить {Brand} {Model} {Type} — {KeyFeature} | {SiteBrand}.<br>
+                        Генерировать уникальные Description, избегая "переполнения" ключевыми словами; включать УТП и гео/логистику по месту необходимости.</li>
+                        <li><strong>Таблица спецификаций:</strong> форм-фактор, тип печати, скорость/ppm, разрешение, интерфейсы, совместимость картриджей, габариты, вес, sku, gtin и т.д.<br>
+                        Структурированные данные повышают шанс попасть в rich snippets; улучшают внутреннюю семантику страницы.</li>
+                        <li><strong>Обогащённое, коммерчески ориентированное описание</strong><br>
+                        2 уровня: 1) краткий продающий абзац (30–60 слов) для верхней части страницы; 2) детальное описание (300–600 слов) с кейсами использования, преимуществами, сравнением с ближайшими моделями.<br>
+                        Включить секцию "Для кого/где целесообразно" + ответы на частые возражения (шум, расходники, гарантия).<br>
+                        Почему: улучшает поведенческие факторы, даёт материал для LSI и long-tail запросов.</li>
+                        <li><strong>Внедрение Product Schema (JSON-LD)</strong><br>
+                        Поля: name, brand, sku, gtin, description, offers (price, availability, currency), aggregateRating, review.<br>
+                        Почему: структурированные данные повышают вероятность оформления сниппетов и попадания в карусели.</li>
+                        <li><strong>Блок внутренней перелинковки: "Сопутствующие товары" и "Расходники"</strong><br>
+                        Шаблонный блок на карточке: "Расходные материалы", "Аксессуары", "Похожие принтеры" и "Комплектующие".<br>
+                        Делать перелинковку по релевантным категориям (фильтр по совместимости картриджей/серии).<br>
+                        Почему: удерживает трафик, повышает средний чек и распределяет внутренний PageRank в товарной ветке.</li>
+                    </ol>
+
+                    <hr>
+
+                    <h2 id="shablony">Конкретные шаблоны (пример)</h2>
+                    <h3 id="title-primer">Title (пример):</h3>
+                    <p>Шаблон: Купить {Brand} {Model} {Type} — {KeyFeature} | OALT.RU</p>
+                    <p>Пример: Купить HP LaserJet Pro MFP M132fn — монохромное МФУ с факсом | OALT.RU</p>
+                    <h3 id="description-primer">Description (пример):</h3>
+                    <p>HP LaserJet Pro MFP M132fn — монохромное лазерное МФУ A4: печать, сканирование, копирование, факс. Совместимо с картриджами CE285A. Доставка по Москве и России. Гарантия и сервис.</p>
+                    <h3 id="h1-primer">H1 (пример):</h3>
+                    <p>HP LaserJet Pro MFP M132fn — монохромное лазерное МФУ A4 с факсом</p>
+                </div>
+
+                <div class="doc-content" id="doc-product-card">
+                    <div class="product-card">
+                        <div class="product-card-gallery">
+                            <img src="image.png" alt="МФУ HP LaserJet Pro M132fn" class="product-card-image">
+                        </div>
+                        <div class="product-card-main">
+                            <h1 id="card-title">HP LaserJet Pro MFP M132fn — монохромное лазерное МФУ A4 с факсом</h1>
+                            <p class="product-card-lead">МФУ HP LaserJet Pro M132fn выполняет четыре функции в одном устройстве: печать, сканирование, копирование и отправку факсов. Это избавляет малый офис от необходимости покупать отдельную технику для каждой задачи. Устройство подключается к локальной сети по Ethernet и работает с Windows и macOS без дополнительных настроек.</p>
+
+                            <div class="product-specs-grid" id="card-specs">
+                                <div class="product-spec-item"><span class="spec-name">Технология</span><span class="spec-value">Лазерная</span></div>
+                                <div class="product-spec-item"><span class="spec-name">Цветность</span><span class="spec-value">Чёрно-белая</span></div>
+                                <div class="product-spec-item"><span class="spec-name">Формат</span><span class="spec-value">A4</span></div>
+                                <div class="product-spec-item"><span class="spec-name">Разрешение</span><span class="spec-value">1200×1200 dpi</span></div>
+                                <div class="product-spec-item"><span class="spec-name">Скорость печати</span><span class="spec-value">22 стр/мин</span></div>
+                                <div class="product-spec-item"><span class="spec-name">АПД</span><span class="spec-value">35 листов</span></div>
+                                <div class="product-spec-item"><span class="spec-name">Факс</span><span class="spec-value">Есть</span></div>
+                                <div class="product-spec-item"><span class="spec-name">Интерфейсы</span><span class="spec-value">Ethernet, USB</span></div>
+                                <div class="product-spec-item"><span class="spec-name">Габариты</span><span class="spec-value">415×279×288 мм</span></div>
+                                <div class="product-spec-item"><span class="spec-name">Вес</span><span class="spec-value">7,6 кг</span></div>
+                            </div>
+
+                            <div class="product-section-title">Описание</div>
+
+                            <div class="product-desc-block" id="desc-pechat">
+                                <h2>Печать</h2>
+                                <p><strong>Скорость печати составляет 22 страницы в минуту</strong> - этого достаточно для рабочей группы до 5 человек без очередей заданий. Первая страница выходит уже через 7,3 секунды после отправки задания. Лазерная технология обеспечивает тонер, устойчивый к воде и истиранию.</p>
+                                <p>Разрешение печати - <strong>1200×1200 dpi</strong>. Текст получается чётким, а тонкие линии в таблицах и схемах - без размытия. Для стандартного офисного документооборота этого разрешения достаточно с запасом.</p>
+                                <p>Рекомендуемая нагрузка - <strong>1500 страниц в месяц</strong>. Превышение этого объёма сокращает ресурс фотобарабана и увеличивает частоту замены расходников. Автоматической двусторонней печати нет - двустороннюю печать потребуется выполнять вручную.</p>
+                            </div>
+
+                            <div class="product-desc-block" id="desc-lotki">
+                                <h2>Лотки и носители</h2>
+                                <p>Основной лоток вмещает <strong>150 листов</strong> - стандартная пачка офисной бумаги. При нагрузке 22 стр/мин это примерно 6–7 часов печати без пополнения. Выходной лоток принимает до 100 листов.</p>
+                                <p>Дополнительно есть лоток ручной подачи на <strong>100 листов</strong>. Через него удобно подавать конверты, открытки или фирменные бланки, не убирая обычную бумагу из основного лотка.</p>
+                                <p>Принтер поддерживает носители плотностью <strong>60–163 г/м²</strong>. Это диапазон от тонкой офисной бумаги до плотного картона для открыток. Наклейки и конверты также поддерживаются.</p>
+                            </div>
+
+                            <div class="product-desc-block" id="desc-skaner">
+                                <h2>Сканер</h2>
+                                <p>Автоподатчик (АПД) вмещает <strong>35 листов</strong> и позволяет сканировать пачку документов без ручной подачи. Это сокращает время обработки: 35 листов проходят примерно за 3 минуты. Автоподатчик односторонний - для двустороннего сканирования листы нужно переворачивать.</p>
+                                <p>Оптическое разрешение достигает <strong>1200×1200 dpi</strong> - достаточно для архивирования документов с мелким шрифтом и реквизитами. Цветное сканирование поддерживается, несмотря на то что сам принтер монохромный.</p>
+                                <p>Результаты сканирования сохраняются в форматах <strong>JPEG, PDF и PNG</strong>. Документы можно отправлять напрямую на электронную почту или в сетевую папку - без промежуточного ПК.</p>
+                            </div>
+
+                            <div class="product-desc-block" id="desc-faks">
+                                <h2>Факс</h2>
+                                <p>Встроенный факс хранит в памяти <strong>1000 страниц</strong>. Входящие документы сохранятся даже при отсутствии бумаги в лотке. Факс подключается через стандартный разъём RJ-11.</p>
+                                <p>Разрешение факса - <strong>300×300 dpi</strong>. Это стандарт ITU для деловой переписки: текст читается чётко, подписи и печати различимы. Цветная передача не поддерживается.</p>
+                            </div>
+
+                            <div class="product-desc-block" id="desc-podkl">
+                                <h2>Подключение и мобильная печать</h2>
+                                <p>МФУ подключается по <strong>Ethernet (RJ-45)</strong> и USB. Проводная сеть обеспечивает стабильное соединение без перебоев, характерных для Wi-Fi. Скорость сети - 10/100 Мбит/с, этого достаточно для офисной очереди печати.</p>
+                                <p>Поддерживаются технологии мобильной печати:</p>
+                                <ul>
+                                    <li><strong>Apple AirPrint</strong> - для iPhone и iPad без установки приложений</li>
+                                    <li><strong>Mopria</strong> - для смартфонов на Android</li>
+                                    <li><strong>HP ePrint</strong> - печать через облачный сервис HP</li>
+                                </ul>
+                                <p>Совместимость охватывает <strong>Windows и macOS</strong>. Шрифтовые языки PCLmS, PWG и URF обеспечивают корректное отображение документов без конвертации.</p>
+                            </div>
+
+                            <div class="product-desc-block" id="desc-proizv">
+                                <h2>Производительность системы</h2>
+                                <p>Процессор работает на частоте <strong>600 МГц</strong>, оперативная памяти - <strong>256 МБ</strong>. Этого достаточно для растеризации многостраничных PDF без зависаний очереди. Жёсткий диск отсутствует - задания обрабатываются в оперативной памяти.</p>
+                                <p>Уровень шума при печати не превышает <strong>51 дБ</strong> - сопоставимо с обычным разговором. Устройство можно разместить в открытом офисном пространстве без звукоизоляционного шкафа.</p>
+                            </div>
+
+                            <div class="product-desc-block" id="desc-rashody">
+                                <h2>Расходные материалы и обслуживание</h2>
+                                <p>Фотобарабан <strong>HP 19A (CF219A)</strong> рассчитан на <strong>12 000 страниц</strong>. При рекомендуемой нагрузке 1500 стр/мес ресурс рассчитан примерно на 8 месяцев. В комплект поставки входит стартовый картридж с уменьшенным ресурсом - для полноценной работы рекомендуется сразу приобрести основной.</p>
+                                <p>Устройство потребляет не более <strong>255 Вт</strong> при печати. Питание - от стандартной розетки 220–240 В.</p>
+                            </div>
+
+                            <div class="product-desc-block" id="desc-komplekt">
+                                <h2>Комплектация и габариты</h2>
+                                <p>В коробке: МФУ, лазерный картридж, фотобарабан, шнур питания, телефонный кабель, документация. Для начала работы не требуется ничего докупать - кроме полноресурсного картриджа взамен стартового.</p>
+                                <p>Размеры устройства - <strong>415 × 279 × 288 мм</strong>, вес - <strong>7,6 кг</strong>. Занимает площадь примерно как стопка бумаги A3; умещается на угловом рабочем столе.</p>
+                            </div>
+
+                            <blockquote>⚠️ <strong>Важно:</strong> Модель снята с производства. Перед покупкой уточните наличие оригинальных картриджей и фотобарабанов у поставщика.</blockquote>
+
+                            <div class="product-section-title" id="card-specs-full">Характеристики</div>
+                            <table class="product-specs-table">
+                                <tbody>
+                                    <tr><th>Технология печати</th><td><strong>Лазерная</strong> — стойкий тонер, устойчивый к воде и истиранию</td></tr>
+                                    <tr><th>Цветность</th><td><strong>Чёрно-белая</strong></td></tr>
+                                    <tr><th>Формат</th><td><strong>A4</strong></td></tr>
+                                    <tr><th>Разрешение печати</th><td><strong>1200×1200 dpi</strong></td></tr>
+                                    <tr><th>Скорость печати</th><td><strong>22 стр/мин</strong></td></tr>
+                                    <tr><th>Время первой страницы</th><td><strong>7,3 сек</strong></td></tr>
+                                    <tr><th>Рекомендуемый объём</th><td><strong>1500 стр/мес</strong></td></tr>
+                                    <tr><th>Двусторонняя печать</th><td>Нет</td></tr>
+                                    <tr><th>Уровень шума</th><td><strong>51 дБ</strong></td></tr>
+                                    <tr><th>Лоток подачи</th><td><strong>150 листов</strong></td></tr>
+                                    <tr><th>Выходной лоток</th><td><strong>100 листов</strong></td></tr>
+                                    <tr><th>АПД</th><td><strong>Односторонний, 35 листов</strong></td></tr>
+                                    <tr><th>Разрешение сканера</th><td><strong>1200×1200 dpi</strong></td></tr>
+                                    <tr><th>Факс</th><td><strong>Есть</strong>, память 1000 стр.</td></tr>
+                                    <tr><th>Интерфейсы</th><td><strong>Ethernet, USB, RJ-11</strong></td></tr>
+                                    <tr><th>Мобильная печать</th><td><strong>AirPrint, Mopria, HP ePrint</strong></td></tr>
+                                    <tr><th>Фотобарабан</th><td><strong>HP 19A (CF219A)</strong> — 12 000 стр.</td></tr>
+                                    <tr><th>Габариты</th><td><strong>415×279×288 мм</strong></td></tr>
+                                    <tr><th>Вес</th><td><strong>7,6 кг</strong></td></tr>
+                                    <tr><th>Гарантия</th><td><strong>12 мес.</strong></td></tr>
+                                    <tr><th>Снято с производства</th><td>Да</td></tr>
+                                </tbody>
+                            </table>
+
+                            <div class="seo-profit-block" id="seo-profit">
+                                <h3>SEO-профит</h3>
+                                <table class="audit-table seo-profit">
+                                    <thead><tr><th>Семантическая сущность</th><th>Для чего нужна</th></tr></thead>
+                                    <tbody>
+                                        <tr><td><strong>"скорость печати 22 страницы в минуту"</strong></td><td>Покрывает транзакционные запросы пользователей, сравнивающих скорость МФУ</td></tr>
+                                        <tr><td><strong>"АПД 35 листов", "потоковое сканирование"</strong></td><td>Привлекает запросы "МФУ с автоподатчиком для офиса"</td></tr>
+                                        <tr><td><strong>"AirPrint", "Mopria", "Google Cloud Print"</strong></td><td>Кластер мобильной печати; высокочастотные брендовые запросы</td></tr>
+                                        <tr><td><strong>"ресурс фотобарабана 12000 страниц"</strong></td><td>SEO на запросы о стоимости владения и совместимых картриджах</td></tr>
+                                        <tr><td><strong>"печать без Wi-Fi", "Ethernet-принтер"</strong></td><td>Закрывает запросы корпоративного сегмента о проводном подключении</td></tr>
+                                        <tr><td><strong>"совместимость с macOS"</strong></td><td>Apple-аудитория ищет "лазерный принтер для Mac"</td></tr>
+                                        <tr><td><strong>"сканирование в email", "сканирование в сетевую папку"</strong></td><td>Покрывает запросы о цифровом документообороте без ПК</td></tr>
+                                        <tr><td><strong>"снято с производства"</strong></td><td>Уточняет намерение покупателя; снижает нецелевые обращения, повышает доверие</td></tr>
+                                        <tr><td><strong>"плотность бумаги 60–163 г/м²"</strong></td><td>Длинный хвост: "МФУ для печати на конвертах", "принтер для плотной бумаги"</td></tr>
+                                        <tr><td><strong>"уровень шума 51 дБ"</strong></td><td>Закрывает поведенческий запрос "тихий офисный принтер"</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters Tab -->
+    <div class="tab-content" id="filtersTab">
+        <div class="sub-tabs-container" data-parent="filters">
+            <button class="sub-tab-button active" data-doc="filters-audit">Аудит фильтров</button>
+            <button class="sub-tab-button" data-doc="filters-desc">Описание категории (пример)</button>
+        </div>
+        <div class="audit-layout" id="filtersLayout">
+            <nav class="toc-nav hidden" id="filtersToc">
+                <div class="toc-title">Содержание</div>
+                <ul class="toc-list" id="filtersTocList"></ul>
+            </nav>
+            <div class="audit-card">
+                <div class="doc-content active" id="doc-filters-audit">
+                    <p class="audit-note">/// Текстовая релевантность для категории предоставлена в <a href="#" class="doc-link" data-doc="filters-desc">описании категории</a> ///</p>
+                    <h2 id="diagnostika">Общая диагностика</h2>
+                    <p>Структура фильтров: всего 4 группы фильтров (Технология печати, Цветность, Формат, Разрешение) + Производитель. При этом огромный пласт поискового спроса остаётся непокрытым: пользователи ищут МФУ по назначению (для дома / для офиса), по функциональности (3 в 1, 4 в 1, с факсом, с СНПЧ, с Wi-Fi, с дуплексом, с автоподатчиком), по подключению, по типу расходников. Ни один из этих параметров не представлен в текущих фильтрах.</p>
+                    <h2 id="novye-filtry">Новые фильтры (пример)</h2>
+                    <table class="audit-table filters-new">
+                        <thead>
+                            <tr><th>Новая группа фильтров</th><th>Предлагаемые значения</th><th>Обоснование (на основе запросов)</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><strong>Назначение</strong></td><td>Для дома, Для офиса, Для малого бизнеса</td><td>Массовые запросы: "мфу для дома", "мфу для офиса", "лучшее мфу для дома", "мфу лазерное для дома", "мфу цветное для офиса". Это ключевой фильтр, которого критически не хватает. Конкуренты (Ozon, DNS, WB) активно используют его для формирования посадочных страниц</td></tr>
+                            <tr><td><strong>Функции устройства</strong></td><td>Принтер + сканер + копир (3 в 1), Принтер + сканер + копир + факс (4 в 1)</td><td>Запросы: "мфу принтер сканер", "мфу принтер сканер копир", "мфу копир сканер", "мфу принтер копир", "мфу 3 в 1", "мфу 4 в 1 с факсом".</td></tr>
+                            <tr><td><strong>Подключение</strong></td><td>Wi-Fi, USB, Ethernet (RJ-45), Wi-Fi Direct, AirPrint, Bluetooth</td><td>Запросы: "мфу с Wi-Fi", "мфу лазерный с WiFi для дома", "мфу с Wi-Fi и двусторонней печатью".</td></tr>
+                            <tr><td><strong>Двусторонняя печать (дуплекс)</strong></td><td>С двусторонней печатью, Без двусторонней печати</td><td>Запросы: "мфу с двусторонней печатью", "лазерный цветной мфу с двусторонней печатью", "мфу с дуплексом".</td></tr>
+                            <tr><td><strong>СНПЧ</strong></td><td>С СНПЧ (встроенная), Без СНПЧ</td><td>Запросы: "мфу с СНПЧ", "мфу струйное с СНПЧ", "мфу с СНПЧ и автоподачей", "Epson мфу с СНПЧ". Один из ключевых критериев выбора для струйных МФУ</td></tr>
+                            <tr><td><strong>Автоподатчик документов (АПД)</strong></td><td>С автоподатчиком, Без автоподатчика</td><td>Запросы: "мфу с автоподатчиком", "мфу с СНПЧ и автоподачей". Важный функциональный критерий для офисных сценариев</td></tr>
+                            <tr><td><strong>Скорость печати</strong></td><td>До 20 стр/мин, 20–30 стр/мин, 30–40 стр/мин, Более 40 стр/мин</td><td>Запросы: "мфу скорость печати 22 стр/мин", "быстрый мфу для офиса". Диапазонные значения лучше точных для SEO</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="doc-content" id="doc-filters-desc">
+                    <h2 id="tekst-relevantnost">Текстовая релевантность (описание над товарами в категории)</h2>
+                    <p>Верхний текст категории нужен не для поисковых систем, а для помощи покупателю. Он должен быстро объяснять, какие товары представлены и чем они отличаются, чтобы человек сразу нашел подходящий вариант и не возвращался обратно в поиск.</p>
+                    <h2 id="primery-teksta">Пример текста</h2>
+                    <p>МФУ в каталоге разделены по ключевым признакам: технология печати - <strong>лазерная / лазерная-светодиодная / светодиодная / струйная</strong>; цветность - <strong>монохромный / цветной</strong>; максимальный формат бумаги - <strong>A3 / A4</strong>; и по техническому пределу качества - доступны модели с разрешением от <strong>600×600</strong> до <strong>5760×1440 dpi</strong> (например 600×600, 1200×1200, 4800×1200, 5760×1440). Отдельная фильтрация - по производителю: Canon, Epson, HP, Kyocera, Brother, Xerox.</p>
+                    <p>Если вам нужна <strong>быстрая и экономичная ч/б печать</strong> для офисных объёмов - выбирайте монохромные лазерные/светодиодные модели с форматом <strong>A4</strong> и базовым разрешением <strong>600×600–1200×1200 dpi</strong>. Для <strong>цветной печати фотографий и маркетинговых материалов</strong> обращайте внимание на струйные МФУ с высоким разрешением (например <strong>4800×1200</strong> или <strong>5760×1440 dpi</strong>) и опцией <strong>A4/A3</strong>, а также на бренды, известные по фотопринтингу (Canon, Epson). Если нужно печатать формат <strong>A3</strong> или готовить плакаты - сразу включите фильтр <strong>Максимальный формат бумаги → A3</strong>; для минимизации расходов на тонер/краску - сначала выберите <strong>Монохромный</strong> и <strong>технологию печати</strong>.</p>
+                    <p>Чтобы быстро найти подходящую модель, начните фильтрацию с двух параметров: <strong>Максимальный формат бумаги</strong> и <strong>Цветность</strong> - затем сузьте по <strong>Технологии печати</strong>, <strong>Максимальному разрешению</strong> и производителю. Используйте комбинации (например: A4 + Монохромный + Лазерная + 1200×1200 dpi) чтобы сразу получить список моделей, соответствующих конкретному сценарию использования.</p>
+                    <hr>
+                    <p>Текст даёт структурированное представление - сначала категории по измеримым параметрам, затем практические сценарии «если нужно X - смотрите Y», и в конце - конкретная последовательность действий. Такой порядок снижает когнитивную нагрузку: пользователь принимает решение, опираясь на два-трёх числовых критерия (формат, цветность, dpi), затем быстро применяет фильтры в логическом порядке для точной выборки.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const TOC_CONFIG = {
+            'doc-product-audit': [
+                { id: 'sostoyanie', text: 'Состояние' },
+                { id: 'primery-uluchsheniya', text: 'Пример улучшения' },
+                { id: 'shablony', text: 'Конкретные шаблоны' }
+            ],
+            'doc-product-card': [
+                { id: 'card-title', text: 'HP LaserJet Pro M132fn' },
+                { id: 'card-specs', text: 'Краткие характеристики' },
+                { id: 'desc-pechat', text: 'Печать' },
+                { id: 'desc-lotki', text: 'Лотки и носители' },
+                { id: 'desc-skaner', text: 'Сканер' },
+                { id: 'desc-faks', text: 'Факс' },
+                { id: 'desc-podkl', text: 'Подключение' },
+                { id: 'desc-proizv', text: 'Производительность' },
+                { id: 'desc-rashody', text: 'Расходные материалы' },
+                { id: 'desc-komplekt', text: 'Комплектация' },
+                { id: 'card-specs-full', text: 'Характеристики' },
+                { id: 'seo-profit', text: 'SEO-профит' }
+            ]
+        };
+
+        function renderToc(docId, tocListEl, layoutEl, tocNavEl) {
+            const items = TOC_CONFIG[docId];
+            if (!items || items.length < 3) {
+                tocNavEl.classList.add('hidden');
+                layoutEl.classList.remove('with-toc');
+                return;
+            }
+            tocNavEl.classList.remove('hidden');
+            layoutEl.classList.add('with-toc');
+            tocListEl.innerHTML = items.map(item =>
+                `<li><a href="#${item.id}">${item.text}</a></li>`
+            ).join('');
+        }
+
+        function switchMainTab(tabName) {
+            document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+            document.querySelector(`.tab-button[data-tab="${tabName}"]`).classList.add('active');
+
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById(`${tabName}Tab`).classList.add('active');
+
+            const subContainer = document.querySelector(`.sub-tabs-container[data-parent="${tabName}"]`);
+            const firstDoc = subContainer.querySelector('.sub-tab-button').dataset.doc;
+            switchDoc(tabName, firstDoc);
+        }
+
+        function switchDoc(parentTab, docId) {
+            const tabContent = document.getElementById(`${parentTab}Tab`);
+            tabContent.querySelectorAll('.sub-tab-button').forEach(b => {
+                b.classList.toggle('active', b.dataset.doc === docId);
+            });
+            tabContent.querySelectorAll('.doc-content').forEach(c => {
+                c.classList.toggle('active', c.id === `doc-${docId}`);
+            });
+
+            const layout = tabContent.querySelector('.audit-layout');
+            const tocNav = tabContent.querySelector('.toc-nav');
+            const tocList = tabContent.querySelector('.toc-list');
+            renderToc(`doc-${docId}`, tocList, layout, tocNav);
+        }
+
+        document.querySelectorAll('.tab-button').forEach(btn => {
+            btn.addEventListener('click', () => switchMainTab(btn.dataset.tab));
+        });
+
+        document.querySelectorAll('.doc-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const doc = link.dataset.doc;
+                const parentTab = doc.startsWith('filters-') ? 'filters' : 'product';
+                switchMainTab(parentTab);
+                switchDoc(parentTab, doc);
+            });
+        });
+
+        document.querySelectorAll('.sub-tab-button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const parentTab = btn.closest('.sub-tabs-container').dataset.parent;
+                switchDoc(parentTab, btn.dataset.doc);
+            });
+        });
+
+        renderToc(
+            'doc-product-audit',
+            document.getElementById('productTocList'),
+            document.getElementById('productLayout'),
+            document.getElementById('productToc')
+        );
+    </script>
+</body>
+</html>
